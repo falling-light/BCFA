@@ -1,4 +1,4 @@
- # Evidential Temporal Contextualization for Egocentric Online Action Segmentation
+ # Egocentric Online Action Segmentation with Behavior-Centred Feature Augmentation
 
 This is the repository for the paper "Egocentric Online Action Segmentation with Behavior-Centred Feature Augmentation".
 
