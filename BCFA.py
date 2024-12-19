@@ -8,8 +8,6 @@ import numpy as np
 import math
 import tqdm
 import pickle
-from edl_loss import EvidenceLoss
-from edl_loss import relu_evidence, exp_evidence, softplus_evidence
 from eval import read_file
 from torch.nn.functional import scaled_dot_product_attention
 from eval import evaluate
@@ -23,6 +21,26 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def exponential_descrease(idx_decoder, p=3):
     return math.exp(-p*idx_decoder)
+
+def class_aware_balancing_loss(target, pred, gamma=0.05, num_classes=11):
+    log_probs = F.log_softmax(pred, dim=1)
+    probs = torch.exp(log_probs)
+    
+
+    target_one_hot = torch.zeros_like(pred).scatter(1, target.unsqueeze(1), 1)
+    pt = (probs * target_one_hot).sum(dim=1)
+    total_length = target.size(0)
+    alpha = []
+
+    for i in range(num_classes):
+        class_count = (target == i).sum().item()
+        alpha_i = total_length / (total_length + class_count * num_classes)
+        alpha.append(alpha_i)
+
+    alpha_t = torch.tensor(alpha, dtype=torch.float32, device=pred.device).gather(0, target)    
+    epsilon = 1e-8
+    balancing_loss = -alpha_t * (1 - pt + epsilon) ** gamma * log_probs.gather(1, target.unsqueeze(1)).squeeze(1)
+    return balancing_loss.mean()         
 
 class ProbabilityProgressFusionModel(nn.Module):
     def __init__(self, num_classes):
@@ -87,14 +105,11 @@ class ScaledDotProductAttention(nn.Module):
         d_k = K.size(-1)
         scores = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(
             d_k)  # scores : [batch_size, n_heads, len_q, len_k]
-        # print("attn_mask", attn_mask)
-        # print("attn_mask shape", attn_mask.shape)
         if short:
             seq_len = attn_mask.size(-1)
             for i in range(seq_len):
-                attn_mask[:, i, :int(i * short_window_scale)] = True
+                attn_mask[:, i, :int(i * (1-short_window_scale))] = True
                 
-        # print("attn_mask2", attn_mask)
         scores.masked_fill_(attn_mask, -1e9)  # Fills elements of self tensor with value where mask is True.
         attn = nn.Softmax(dim=-1)(scores)
         context = torch.matmul(attn, V)  # [batch_size, n_heads, len_q, d_v]
@@ -382,9 +397,9 @@ class Encoder(nn.Module):
         return out, feature, progress_out
 
 
-class CAD(nn.Module):
+class BED(nn.Module):
     def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, att_type, alpha,causal=True):
-        super(CAD, self).__init__()       
+        super(BED, self).__init__()       
         self.conv_1x1 = nn.Conv1d(input_dim, num_f_maps, 1)
         self.layers = nn.ModuleList(
             [AttModule(2 ** i, num_f_maps, num_f_maps, r1, r2, att_type, 'decoder', alpha) for i in # 2 ** i
@@ -408,28 +423,9 @@ class CAD(nn.Module):
         out = out * mask[:, 0:1, :]
         return out, feature, progress_out
 
-class PAD(nn.Module):
-    def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, att_type, alpha,causal=True, shift = 1):
-        super(PAD, self).__init__()#         self.position_en = PositionalEncoding(d_model=num_f_maps)
-        self.layers = nn.ModuleList(
-            [AttModule(2 ** i, num_f_maps, num_f_maps, r1, r2, att_type, 'decoder', alpha) for i in # 2 ** i
-             range(num_layers)])
-        self.conv_out = nn.Conv1d(num_f_maps, num_classes, 1)
-        self.shift = shift
-    def forward(self, x, fencoder, mask, causal=False):
-
-        future_x = x
-        for layer in self.layers:
-            feature = layer(future_x, fencoder, mask,causal)
-
-        out = self.conv_out(feature) * mask[:, 0:1, :]
-        out = out * mask[:, 0:1, :]
-        return out, feature
-    
-
-class FutureFeatureFusionModel(nn.Module):
+class FeatureFusionModel(nn.Module):
     def __init__(self, num_f_maps):
-        super(FutureFeatureFusionModel, self).__init__()
+        super(FeatureFusionModel, self).__init__()
         self.num_f_maps = num_f_maps
         self.conv = nn.Conv1d(num_f_maps*2, num_f_maps, 1)
         self.relu = nn.ReLU()
@@ -443,51 +439,38 @@ class FutureFeatureFusionModel(nn.Module):
         return out
 
 
-class ETC(nn.Module):
-    def __init__(self, num_decoders, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=True, use_graph=True,shift = 1, **graph_args):
-        super(ETC, self).__init__()
-        self.short_window_scale = 0.4
+class PBE(nn.Module):
+    def __init__(self, num_decoders, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=True, use_graph=True, **graph_args):
+        super(PBE, self).__init__()
         self.encoder = Encoder(num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, att_type='block_att', alpha=1,causal=causal)
-        self.decoders = nn.ModuleList([copy.deepcopy(CAD(num_layers, r1, r2, num_f_maps, num_classes, num_classes, att_type='block_att', alpha=exponential_descrease(s),causal=causal)) for s in range(num_decoders)]) # num_decoders
-        self.prototype_fusion = FutureFeatureFusionModel(num_f_maps)
+        self.decoders = nn.ModuleList([copy.deepcopy(BED(num_layers, r1, r2, num_f_maps, num_classes, num_classes, att_type='block_att', alpha=exponential_descrease(s),causal=causal)) for s in range(num_decoders)]) # num_decoders
+        self.prototype_fusion = FeatureFusionModel(num_f_maps)
         self.causal = causal
         self.use_graph = use_graph
         if use_graph:
             self.graph_learner = TaskGraphLearner(**graph_args)
     def forward(self, x, mask, prototypes, causal=False, short = False, short_window_scale = 0.2):
         out, feature, progress_out = self.encoder(x, mask, causal = self.causal)
-        # print("feature",feature.shape)
-        #prototype feature
         _, predicted = torch.max(out.data, 1)
         predicted = predicted.squeeze()
+        if predicted.dim() == 0:
+            predicted = predicted.unsqueeze(0)
         prototype_feature = []
-        # all_class_prototypes = []
-        # for c in prototypes:
-        #     class_prototypes = prototypes[c]
-        #     if class_prototypes is not None:
-        #         all_class_prototypes.append(class_prototypes)
-        # all_class_prototypes = torch.cat(all_class_prototypes, dim=0)
-        # print("all_class_prototypes",all_class_prototypes.shape)
         for i in range(predicted.shape[0]):
             class_idx = str(predicted[i].item())
             class_prototypes = prototypes[class_idx]
             
             current_feature = feature[:,:,i]
             if class_prototypes is None:
-                # print("current_feature", current_feature.shape)
                 prototype_feature.append(current_feature)
                 continue
             similarity = F.cosine_similarity(class_prototypes.unsqueeze(0), current_feature.unsqueeze(0), dim=-1)
-            max_sim_idx = similarity.argmax(dim=-1)  # 找到相似度最高的原型索引
-            # 获取相似度最高的原型
+            max_sim_idx = similarity.argmax(dim=-1)  
             best_prototype = class_prototypes[max_sim_idx]
-            # print("best_prototype",best_prototype.shape)
             prototype_feature.append(best_prototype)
 
-            # prototype_feature.append(prototypes[class_idx].mean(dim=0))
         prototype_feature = torch.stack(prototype_feature, dim=0)
-        # print("prototype_feature",prototype_feature.shape)
-        prototype_feature = prototype_feature.permute(1,2,0)  # 调整形状
+        prototype_feature = prototype_feature.permute(1,2,0)  
         feature = self.prototype_fusion(feature, prototype_feature)
 
         prob_outputs = out.unsqueeze(0)
@@ -500,11 +483,11 @@ class ETC(nn.Module):
         return prob_outputs,progress_outputs
 
 
-class T_prototype(nn.Module):
+class PLT(nn.Module):
     def __init__(self, num_decoders, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=True, use_graph=True,cluster = 'kmeans', **graph_args):
-        super(T_prototype, self).__init__()
+        super(PLT, self).__init__()
         self.encoder = Encoder(num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, att_type='block_att', alpha=1,causal=causal)
-        self.decoders = nn.ModuleList([copy.deepcopy(CAD(num_layers, r1, r2, num_f_maps, num_classes, num_classes, att_type='block_att', alpha=exponential_descrease(s),causal=causal)) for s in range(num_decoders)]) # num_decoders
+        self.decoders = nn.ModuleList([copy.deepcopy(BED(num_layers, r1, r2, num_f_maps, num_classes, num_classes, att_type='block_att', alpha=exponential_descrease(s),causal=causal)) for s in range(num_decoders)]) # num_decoders
         self.causal = causal
         self.num_classes = num_classes
         self.use_graph = use_graph
@@ -544,21 +527,14 @@ class T_prototype(nn.Module):
                     self.cluster_models[str(i)] = Birch(n_clusters=self.num_clusters)
                 elif self.clustering_method == 'mean_shift':
                     self.cluster_models[str(i)] = MeanShift()
-                elif self.clustering_method == 'affinity_propagation':
-                    self.cluster_models[str(i)] = AffinityPropagation()
     def generate_prototypes(self, features, labels, num_clusters=8):
         batch_size, num_features, num_frames = features.shape
-        # print("features",features.shape)
         for cls_idx in range(self.num_classes):
             mask = (labels == cls_idx).unsqueeze(1).expand(batch_size, num_features, num_frames)
             class_features = features[mask].view(num_features, -1)
             if class_features.size(1) == 0:
                 continue
             class_features = class_features.permute(1, 0).contiguous()
-            # print("class_features",class_features.shape)
-            # kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(class_features.detach().cpu().numpy())
-            # cluster_centers = torch.tensor(kmeans.cluster_centers_, dtype=torch.float32).to(features.device)
-            # print("cluster_centers",cluster_centers.shape)
             if self.prototypes[str(cls_idx)] is None:
                 self.prototypes[str(cls_idx)] = class_features.detach()
             else:
@@ -568,22 +544,19 @@ class T_prototype(nn.Module):
             if value is None:
                 continue
             if self.num_clusters > 1:
-                # print("value shape", value.shape)
                 cluster_labels = self.cluster_models[key].fit_predict(value.detach().cpu().numpy())
-                # print("cluster_labels shape",len(cluster_labels))
                 cluster_centers = []
                 for i in range(self.num_clusters):
                     cluster_centers.append(value[cluster_labels == i].mean(dim=0, keepdim=True))
                 cluster_centers = torch.cat(cluster_centers, dim=0)
                 cluster_centers = cluster_centers.to(value.device)
-                # print("cluster_centers shape",cluster_centers.shape)
                 self.prototypes[key] = cluster_centers
             else:
                 self.prototypes[key] = value.mean(dim=1, keepdim=True)  
 class Trainer:
-    def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate,causal ,logger, progress_lw=1.0, graph_lw=0.01, use_graph=True, init_graph_path='', learnable=True, gamma_a=0.05, gamma_b=0.05, background_lw=0.6, focus_lw = 0.2, short_window_scale = 0.2,shift = 1,cluster = 'kmeans'):
-        self.model = ETC(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable,shift=shift)
-        self.prototype_model = T_prototype(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable, cluster=cluster)
+    def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate,causal ,logger, progress_lw=1.0, graph_lw=0.01, use_graph=True, init_graph_path='', learnable=True, gamma=0.05, balancing_lw=0.6, be_lw = 0.2, short_window_scale = 0.2,cluster = 'kmeans'):
+        self.model = PBE(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable)
+        self.prototype_model = PLT(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable, cluster=cluster)
         self.prototypes = {}
         self.ce = nn.CrossEntropyLoss(ignore_index=-100)
         self.num_classes = num_classes
@@ -592,31 +565,18 @@ class Trainer:
         self.use_graph = use_graph
         self.graph_lw = graph_lw
         self.logger = logger
-        self.gamma_a = gamma_a
-        self.gamma_b = gamma_b
-        self.background_lw = background_lw
-        self.focus_lw = focus_lw
+        self.gamma = gamma
+        self.balancing_lw = balancing_lw
+        self.be_lw = be_lw
         self.short_window_scale = short_window_scale
         self.cluster = cluster
-        self.evidence_loss = EvidenceLoss(
-            num_classes=num_classes,
-            evidence='exp',
-            loss_type='log',
-            with_kldiv=False,
-            with_avuloss=False,
-            disentangle=False,
-            annealing_method='exp')
         
-        print('Model Size: ', sum(p.numel() for p in self.model.parameters()))
         self.mse = nn.MSELoss(reduction='none')
         self.num_classes = num_classes
-        self.shift = shift
-    def predict(self, model_dir, results_dir, features_path, vid_list_file, epoch, actions_dict, device, sample_rate, feature_transpose=False, map_delimiter=' ', dataset = 'gtea',window_size = 1,threthold = 0.01):
+
+    def predict(self, model_dir, results_dir, features_path, vid_list_file, epoch, actions_dict, device, sample_rate, feature_transpose=False, map_delimiter=' ', dataset = 'gtea'):
         self.model.eval()
         self.prototype_model.eval()
-        background_num = 0
-        if dataset in ['gtea']:
-            background_num = 10
         with torch.no_grad():
             self.model.to(device)
             self.model.load_state_dict(torch.load(model_dir + "/epoch-" + str(epoch) + ".model"))
@@ -637,29 +597,15 @@ class Trainer:
                 input_x = torch.tensor(features, dtype=torch.float)
                 input_x.unsqueeze_(0)
                 input_x = input_x.to(device)
-                predictions1, progress_predictions1,_ = self.prototype_model(input_x, torch.ones(input_x.size(), device=device))
                 prototypes = self.prototype_model.prototypes
                 predictions, progress_predictions = self.model(input_x, torch.ones(input_x.size(), device=device), prototypes)
                 final_predictions = self.model.graph_learner.inference(predictions[-1], progress_predictions[-1])
 
                 final_predictions_seq = final_predictions.permute(2, 0, 1).view(-1, self.num_classes)
                 final_predictions_prob = F.softmax(final_predictions_seq, dim=1)
-                pre_num, predicted = torch.max(final_predictions_prob.data, 1)
-                for i in range(len(final_predictions_prob)):
-                    if pre_num[i] < 0.6:
-                        # print("index",i)
-                        # print("pre_num",pre_num[i])
-                        pre = max(0, i - 4 + 1)
-                        if pre < i:
-                            final_predictions_prob[i] = final_predictions_prob[pre:i+1].mean(dim=0) 
-                _, predicted = torch.max(final_predictions_prob.data, 1)
-                # print("final_predictions_prob",final_predictions_prob)
-                # print("final_predictions_seq",final_predictions_seq)
-                
+                _, predicted = torch.max(final_predictions_prob.data, 1)                
                 predicted = predicted.squeeze()
 
-                # _, predicted = torch.max(final_predictions_seq.data, 1)
-                # predicted = predicted.squeeze()
                 recognition = []
 
                 for i in range(len(predicted)):
@@ -673,14 +619,13 @@ class Trainer:
                 f_ptr.write(map_delimiter.join(recognition))
                 f_ptr.close()
 
-    def predict_online(self, model_dir, results_dir, features_path, vid_list_file, epoch, actions_dict, device, sample_rate, feature_transpose=False, map_delimiter=' ',shift = 1,window_size = 1,threthold = 0.01, dataset = 'gtea'):
+    def predict_online(self, model_dir, results_dir, features_path, vid_list_file, epoch, actions_dict, device, sample_rate, feature_transpose=False, map_delimiter=' ', dataset = 'gtea'):
         self.model.eval()
-        background_num = 0
-        if dataset in ['gtea']:
-            background_num = 10
         with torch.no_grad():
             self.model.to(device)
             self.model.load_state_dict(torch.load(model_dir + "/epoch-" + str(epoch) + ".model"))
+            self.prototype_model.to(device)
+            self.prototype_model.load_state_dict(torch.load(model_dir + "/prototype_epoch-" + str(epoch) + ".model"))
             file_ptr = open(vid_list_file, 'r')
             list_of_vids = file_ptr.read().split('\n')[:-1]
             file_ptr.close()
@@ -693,22 +638,18 @@ class Trainer:
                 input_x.unsqueeze_(0)
                 input_x = input_x.to(device)
                 n_frames = input_x.shape[-1]
-                recognition = ['background'] * (shift)
-                for frame_i in tqdm.tqdm(range(shift, n_frames)):
+                recognition = []
+                prototypes = self.prototype_model.prototypes
+                for frame_i in tqdm.tqdm(range(n_frames)):
                     curr_input_x = input_x[:, :, :frame_i+1]
-                    predictions, progress_predictions,_,_,_= self.model(curr_input_x, torch.ones(curr_input_x.size(), device=device))
+                    predictions, progress_predictions = self.model(curr_input_x, torch.ones(curr_input_x.size(), device=device), prototypes)
                     final_predictions = self.model.graph_learner.inference(predictions[-1], progress_predictions[-1])
-                    uncertainty = self.evidence_loss(final_predictions.transpose(2, 1).contiguous().view(-1, self.num_classes), torch.ones(final_predictions.size(0), dtype=torch.long, device=device) * background_num, epoch = epoch, total_epoch = 100)
-                    uncertainty = uncertainty['uncertainty']
                     final_predictions_seq = final_predictions.permute(2, 0, 1).view(-1, self.num_classes)
-                    for i in range(len(final_predictions_seq)):
-                        if uncertainty[i] > threthold:
-                            pre = max(0, i - window_size + 1) 
-                            if pre < i:
-                                final_predictions_seq[i] = final_predictions_seq[pre:i+1].mean(dim=0)
-                            
                     _, predicted = torch.max(final_predictions_seq.data, 1)
-                    predicted = predicted.squeeze(0)
+                    predicted = predicted.squeeze()
+                    if predicted.dim() == 0:
+                        predicted = predicted.unsqueeze(0)
+
                     recognition = np.concatenate((recognition, [list(actions_dict.keys())[list(actions_dict.values()).index(predicted[-1].item())]]*sample_rate))
                 f_name = vid.split('/')[-1].split('.')[0]
                 f_ptr = open(results_dir + "/" + f_name, "w")
@@ -716,26 +657,6 @@ class Trainer:
                 f_ptr.write(map_delimiter.join(recognition))
                 f_ptr.close()
 
-def calculate_background_loss(target, pred, gamma_b=0.025, gamma_a=0.05, num_classes=11, background_num=10):
-    log_probs = F.log_softmax(pred, dim=1)
-    probs = torch.exp(log_probs)
-    
-
-    target_one_hot = torch.zeros_like(pred).scatter(1, target.unsqueeze(1), 1)
-    pt = (probs * target_one_hot).sum(dim=1)
-    
-    is_background = (target == background_num).float()
-    is_foreground = (target != background_num).float()
-    background_count = is_background.sum().item()
-    total_length = target.size(0)
-    back_alpha = total_length / (total_length + background_count)
-    alpha = [back_alpha if i == background_num else (1- back_alpha) for i in range(num_classes)]
-    alpha_t = torch.tensor(alpha, dtype=torch.float32, device=pred.device).gather(0, target)
-    epsilon = 1e-8
-    loss_background = -alpha_t * is_background * (1 - pt + epsilon) ** gamma_b * log_probs.gather(1, target.unsqueeze(1)).squeeze(1)
-    loss_foreground = -alpha_t * is_foreground * (1 - pt + epsilon) ** gamma_a * log_probs.gather(1, target.unsqueeze(1)).squeeze(1)
-    background_loss = loss_background + loss_foreground
-    return background_loss.mean()         
 
 
 if __name__ == '__main__':

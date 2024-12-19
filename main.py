@@ -30,15 +30,12 @@ parser.add_argument('--learnable_graph', action='store_true', help="Use learnabl
 parser.add_argument('--lr', default=0.0005, type=float, help="Learning rate")
 parser.add_argument('--progress_lw', default=1.0, type=float, help="Loss weight for progress prediction")
 parser.add_argument('--graph_lw', default=0.1, type=float, help="Loss weight for graph prediction")
-parser.add_argument('--gamma_a', default=0.05, type=float, help="gamma_a for focal loss")
-parser.add_argument('--gamma_b', default=0.05, type=float, help="gamma_b for focal loss")
-parser.add_argument('--background_lw', default=0.2, type=float, help="Loss weight for background")
+parser.add_argument('--gamma', default=0.05, type=float, help="gamma_a for focal loss")
+parser.add_argument('--balancing_lw', default=0.1, type=float, help="Loss weight for class-aware balancing loss")
 parser.add_argument('--num_layers', default=10, type=int, help="num_layers")
 parser.add_argument('--channel_mask_rate', default=0.4, type=float, help="channel_mask_rate")
-parser.add_argument('--focus_lw', default=0.2, type=float, help="Loss weight for focus loss")
-parser.add_argument('--short_window_scale', default=0.2, type=float, help="mask for short time focus")
-parser.add_argument('--shift', default=1, type=int, help="shift size for PAD")
-parser.add_argument('--window', default=1, type=int, help="window size for Uncertainty-wise Contextual Modification")
+parser.add_argument('--be_lw', default=0.2, type=float, help="Loss weight for behavior enhancement loss")
+parser.add_argument('--short_window_scale', default=0.2, type=float, help="mask for short time behavior enhancement")
 parser.add_argument('--cluster', default='kmeans', type=str, help="cluster method")
 
 
@@ -94,8 +91,6 @@ logger.info(args)
 # Read action mapping file
 with open(mapping_file, 'r') as file_ptr:
     actions = file_ptr.read().split('\n')[:-1]
-# print("actions", actions)
-# Create action dictionary
 actions_dict = dict()
 map_delimiter = '|' if args.dataset in ['coffee', 'tea', 'pinwheels', 'oatmeal', 'quesadilla'] else ' '
 feature_transpose = False
@@ -105,10 +100,8 @@ if args.dataset in ['coffee', 'tea', 'pinwheels', 'oatmeal', 'quesadilla']:
     feature_transpose = True
 # feature_transpose = True if args.dataset in ['coffee', 'tea', 'pinwheels', 'oatmeal', 'quesadilla'] else False
 # feature_transpose = True if args.dataset in ['egoprocel'] else False
-# print("feature_transpose", feature_transpose)
 
 for a in actions:
-    # print("a.split(map_delimiter)[1]", a.split(map_delimiter)[1])
     actions_dict[a.split(map_delimiter)[1]] = int(a.split(map_delimiter)[0])
 
 num_classes = len(actions_dict)
@@ -119,9 +112,9 @@ trainer = Trainer(
     causal=args.causal, logger=logger, progress_lw=args.progress_lw, 
     use_graph=args.graph, graph_lw=args.graph_lw, init_graph_path=graph_path, 
     learnable=args.learnable_graph,
-    gamma_a=args.gamma_a, gamma_b=args.gamma_b, background_lw=args.background_lw,
-    focus_lw=args.focus_lw, short_window_scale=args.short_window_scale,
-    shift = args.shift, cluster = args.cluster
+    gamma=args.gamma, balancing_lw=args.balancing_lw,
+    be_lw=args.be_lw, short_window_scale=args.short_window_scale,
+    cluster = args.cluster
 )
 
 # Perform the specified action
@@ -132,14 +125,10 @@ if args.action == "train":
     batch_gen_tst.read_data(vid_list_file_tst)
 
     trainer.train(model_dir, batch_gen, num_epochs=num_epochs, batch_size=bz, learning_rate=lr,batch_gen_tst = batch_gen_tst, device=device, dataset = args.dataset, results_dir=results_dir, features_path=features_path, vid_list_file_tst=vid_list_file_tst, actions_dict=actions_dict, sample_rate=sample_rate,feature_transpose = feature_transpose,split=args.split, exp_id=args.exp_id,map_delimiter = map_delimiter)
-    # trainer.predict(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter, args.dataset)
-    # evaluate(args.dataset, results_dir, args.split, args.exp_id, args.num_epochs)
-    # trainer.predict_online(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter)
-    # evaluate(args.dataset, results_dir, args.split, args.exp_id, args.num_epochs)
 
 elif args.action == 'predict':
-    trainer.predict(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter, args.dataset, args.window)
+    trainer.predict(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter, args.dataset)
     evaluate(args.dataset, results_dir, args.split, args.exp_id, args.num_epochs)
 elif args.action == "predict_online":
-    trainer.predict_online(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter, args.shift, args.window, dataset = args.dataset)
+    trainer.predict_online(model_dir, results_dir, features_path, vid_list_file_tst, num_epochs, actions_dict, device, sample_rate, feature_transpose, map_delimiter, dataset = args.dataset)
     evaluate(args.dataset, results_dir, args.split, args.exp_id, args.num_epochs)
