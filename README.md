@@ -41,7 +41,7 @@ For more experimental details and visualizations, please refer to our main text 
 
 ## Download the checkpoints
 We have uploaded the model training checkpoints and the necessary data for testing.  
-Please ensure the checkpoint is saved to the directory **models/<exp_id>/<dataset_name>/<split_number>** and the data file is placed in the **data** folder.  
+Please ensure the checkpoint is saved to the directory **models** and the data file is placed in the **data** folder.  
 
 If you download them to other locations, update the corresponding arguments in `main.py` accordingly.
 
