@@ -96,20 +96,11 @@ def edit_score(recognized, ground_truth, norm=True, bg_class=["background"]):
     ground_truth_no_bg = [a for a in ground_truth if not a in bg_class]
     P = [k for k, g in groupby(recognized_no_bg)]
     Y = [k for k, g in groupby(ground_truth_no_bg)]
-    # print("P", P)
-    # print("Y", Y)
-    #P, _, _ = get_labels_start_end_time(recognized, bg_class)
-    #Y, _, _ = get_labels_start_end_time(ground_truth, bg_class)
     return levenstein(P, Y, norm)
 
 
 def f_score(recognized, ground_truth, overlap, bg_class=["background"]):
     p_label, p_start, p_end = get_labels_start_end_time(recognized, bg_class)
-    # print("Recognized: ", recognized)
-    # print("p_label: ", p_label)
-    # print("p_start: ", p_start)
-    # print("p_end: ", p_end)
-    # print(p_label, p_start, p_end)
     y_label, y_start, y_end = get_labels_start_end_time(ground_truth, bg_class)
 
     tp = 0
@@ -119,17 +110,9 @@ def f_score(recognized, ground_truth, overlap, bg_class=["background"]):
 
     for j in range(len(p_label)):
         intersection = np.minimum(p_end[j], y_end) - np.maximum(p_start[j], y_start)
-        # print("intersection", intersection)
         union = np.maximum(p_end[j], y_end) - np.minimum(p_start[j], y_start)
-        # print("union", union)
-        # print("1.0*intersection / union",1.0*intersection / union)
-        # print("tt", [p_label[j] == y_label[x] for x in range(len(y_label))])
         IoU = (1.0*intersection / union)*([p_label[j] == y_label[x] for x in range(len(y_label))])
-        # print("IOU", IoU)
-        # Get the best scoring segment
-        # print("IoU", IoU)
         idx = np.array(IoU).argmax()
-        # print("IoU[idx]", IoU[idx])
         if IoU[idx] >= overlap and not hits[idx]:
             tp += 1
             hits[idx] = 1
@@ -168,8 +151,6 @@ def evaluate(dataset, result_dir, split, exp_id, num_epochs):
         gt_file = ground_truth_path + vid
         gt_content = read_file(gt_file).split('\n')[0:-1]
         recog_content = read_file(recog_file).split('\n')[1].split(map_delimiter)
-        # print("len(gt_content)", len(gt_content))
-        # print("len(recog_content)", len(recog_content))
         l = min(len(gt_content), len(recog_content))
         if len(gt_content) != len(recog_content):
             gt_content = gt_content[:l]

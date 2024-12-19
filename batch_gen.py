@@ -42,9 +42,6 @@ class BatchGenerator(object):
         batch_target = []
         batch_progress = []
         for vid in batch:
-            # print("vid", vid)
-            # if not vid.endswith('.txt'):
-            #     vid = vid + '.txt'
             if self.dataset == 'egoprocel':
                 features = np.load(self.features_path + vid + '.npy')
                 progress_values = np.load(self.progress_path + vid + '.npy')
@@ -57,29 +54,18 @@ class BatchGenerator(object):
                 file_ptr = open(self.gt_path + vid, 'r')
             if self.feature_transpose:
                 features = features.T
-            # print("features shape", np.shape(features))
-            # print("self.gt_path + vid", self.gt_path + vid)
             
             content = file_ptr.read().split('\n')[:-1]
-            # print("content", len(content))
-            # print("len(content)", len(content))
-            # print("np.shape(features)", np.shape(features))
             np.set_printoptions(threshold=np.inf)
             if len(content) < np.shape(features)[1]:
                 features = features[:, :len(content)]
-            # print("len(content)", len(content))
             classes = np.zeros(min(np.shape(features)[1], len(content)))
             for i in range(len(classes)):
                 classes[i] = self.actions_dict[content[i]]
             
-            # print("classes", classes)
-            # print("len classes", len(classes))
             batch_input.append(features[:, ::self.sample_rate])
             batch_target.append(classes[::self.sample_rate])
             batch_progress.append(progress_values[:, ::self.sample_rate])
-            # print("features[:, ::self.sample_rate] shape ", features[:, ::self.sample_rate].shape)
-            # print("classes[::self.sample_rate] shape ", classes[::self.sample_rate].shape)
-            # print("progress_values[:, ::self.sample_rate] shape ", progress_values[:, ::self.sample_rate].shape)
         
         length_of_sequences = list(map(len, batch_target))
 
@@ -88,10 +74,6 @@ class BatchGenerator(object):
         batch_progress_tensor = torch.zeros(len(batch_input), np.shape(batch_progress[0])[0], max(length_of_sequences), dtype=torch.float)
         mask = torch.zeros(len(batch_input), self.num_classes, max(length_of_sequences), dtype=torch.float)
         for i in range(len(batch_input)):
-            # print("np.shape(batch_input[i])", np.shape(batch_input[i]))
-            # print("np.shape(batch_input[i])[1]", np.shape(batch_input[i])[1])
-            # print("np.shape(batch_target[i])", np.shape(batch_target[i]))
-            # print("np.shape(batch_progress[i])", np.shape(batch_progress[i]))
             batch_input_tensor[i, :, :np.shape(batch_input[i])[1]] = torch.from_numpy(batch_input[i])
             batch_target_tensor[i, :np.shape(batch_target[i])[0]] = torch.from_numpy(batch_target[i])
             
