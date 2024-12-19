@@ -40,9 +40,6 @@ def write_progress_values(dataset, bg_class=[0], map_delimiter=' '):
         # Calculate progress values for each action segment
         for k, v in groupby(classes):
             segment_length = len(list(v))
-            # print("k", k)
-            # # print("v", v)
-            # print("len list(v)", segment_length)
             if k not in bg_class:
                 cur_progress = (np.arange(segment_length) + 1) / segment_length
                 progress_values[k, cur_frame:cur_frame+segment_length] = cur_progress
@@ -55,11 +52,8 @@ def write_progress_values(dataset, bg_class=[0], map_delimiter=' '):
 
 if __name__ == '__main__':
     # Generate progress values for specified datasets
-    # write_progress_values('gtea', [10], ' ')
+    write_progress_values('gtea', [10], ' ')
     # write_progress_values('egoprocel', [0], ' ')
-    write_progress_values('50salads', [17, 18], ' ')
-    write_progress_values('breakfast', [0], ' ')
-
     # for dataset in ['coffee', 'tea', 'pinwheels', 'oatmeal', 'quesadilla']:
     #     write_progress_values(dataset, [0], '|')
 

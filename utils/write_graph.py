@@ -32,21 +32,17 @@ def write_graph_from_transcripts(dataset, bg_class=[0], map_delimiter=' '):
     print("Actions dict: ", actions_dict)
     # Process each video in the ground truth path
     for vid in tqdm.tqdm(os.listdir(gt_path)):
-        # print("Processing video: ", vid)
         file_ptr = open(os.path.join(gt_path, vid), 'r')
         content = file_ptr.read().split('\n')[:-1]
-        # print("len Content: ", len(content))
         classes = np.zeros([len(content)], dtype=np.int32)
         
         # Map each action in the content to its corresponding index
         for i in range(len(classes)):
             classes[i] = actions_dict[content[i]]
-        # print("classes ", classes)
         # Filter out background classes
         classes_wo_bg = [a for a in classes if a not in bg_class]
         # print("classes_wo_bg ", classes_wo_bg)
         transcript = [k for k, v in groupby(classes_wo_bg)]
-        # print("Transcript: ", transcript)
         # Update counts and matrices
         for a in transcript:
             count[a] += 1
@@ -56,14 +52,8 @@ def write_graph_from_transcripts(dataset, bg_class=[0], map_delimiter=' '):
     
     # Normalize the matrices
     # after normalization, pre_mat and suc_mat are not symmetric
-    # print("count[None, :]", count[None, :])
-    # np.set_printoptions(threshold=np.inf)
-    # print("pre_mat: ", pre_mat)
-    # print("suc_mat: ", suc_mat)
     pre_mat = pre_mat / np.maximum(count[None, :], 1e-5)
     suc_mat = suc_mat / np.maximum(count[None, :], 1e-5)
-    # print("then pre_mat: ", pre_mat)
-    # print("then suc_mat: ", suc_mat)
     
     # Save the graph
     graph = {'matrix_pre': pre_mat, 'matrix_suc': suc_mat}
@@ -73,11 +63,8 @@ def write_graph_from_transcripts(dataset, bg_class=[0], map_delimiter=' '):
 
 if __name__ == '__main__':
     # Generate graphs for specified datasets
-    # write_graph_from_transcripts('gtea', [10], ' ')
+    write_graph_from_transcripts('gtea', [10], ' ')
     # write_graph_from_transcripts('egoprocel', [0], ' ')
-    write_graph_from_transcripts('50salads', [17, 18], ' ')
-    write_graph_from_transcripts('breakfast', [0], ' ')
-
     # for dataset in ['coffee', 'tea', 'pinwheels', 'oatmeal', 'quesadilla']:
     #     write_graph_from_transcripts(dataset, [0], '|')
 
