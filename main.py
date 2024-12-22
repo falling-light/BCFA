@@ -75,7 +75,7 @@ os.makedirs(model_dir, exist_ok=True)
 os.makedirs(results_dir, exist_ok=True)
 
 # Logger setup
-logger = logging.getLogger('ETC')
+logger = logging.getLogger('BCFA')
 current_time = datetime.now()
 log_filename = current_time.strftime("%Y-%m-%d_%H-%M-%S.log")
 logging.basicConfig(
