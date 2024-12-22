@@ -35,7 +35,7 @@ parser.add_argument('--balancing_lw', default=0.1, type=float, help="Loss weight
 parser.add_argument('--num_layers', default=10, type=int, help="num_layers")
 parser.add_argument('--channel_mask_rate', default=0.4, type=float, help="channel_mask_rate")
 parser.add_argument('--be_lw', default=0.2, type=float, help="Loss weight for behavior enhancement loss")
-parser.add_argument('--short_window_scale', default=0.2, type=float, help="mask for short time behavior enhancement")
+parser.add_argument('--short_window_scale', default=0.1, type=float, help="mask for short time behavior enhancement")
 parser.add_argument('--cluster', default='kmeans', type=str, help="cluster method")
 
 
