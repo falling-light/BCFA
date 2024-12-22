@@ -554,7 +554,7 @@ class PLT(nn.Module):
             else:
                 self.prototypes[key] = value.mean(dim=1, keepdim=True)  
 class Trainer:
-    def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate,causal ,logger, progress_lw=1.0, graph_lw=0.01, use_graph=True, init_graph_path='', learnable=True, gamma=0.05, balancing_lw=0.6, be_lw = 0.2, short_window_scale = 0.2,cluster = 'kmeans'):
+    def __init__(self, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate,causal ,logger, progress_lw=1.0, graph_lw=0.01, use_graph=True, init_graph_path='', learnable=True, gamma=0.05, balancing_lw=0.1, be_lw = 0.2, short_window_scale = 0.2,cluster = 'kmeans'):
         self.model = PBE(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable)
         self.prototype_model = PLT(3, num_layers, r1, r2, num_f_maps, input_dim, num_classes, channel_masking_rate, causal=causal, use_graph=use_graph, init_graph_path=init_graph_path, learnable=learnable, cluster=cluster)
         self.prototypes = {}
