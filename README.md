@@ -120,8 +120,6 @@ python main.py --action predict --dataset <dataset_name> --split <split_number> 
     </tbody>
 </table>
 
-### Results on EgoPER Dataset
-
 <h3 style="text-align:center;">Results on EgoPER Dataset</h3>
 
 <table style="width:100%; border-collapse:collapse; text-align:center; margin:auto; border:1px solid black;">
