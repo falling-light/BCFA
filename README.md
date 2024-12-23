@@ -61,5 +61,42 @@ python main.py --action predict --dataset <dataset_name> --split <split_number> 
 
 **Note:** Theoretically, to test the model in an online setting, you should use the `--action predict_online` argument, which makes predictions frame by frame. However, if the model is set to be causal, it will only make predictions based on frames up to the current frame. In this case, using `--action predict` will produce the same results while being more efficient.
 
+## Experimental Results on EgoProceL, EgoPER, and GTEA Datasets
+
+### Results on EgoProceL Dataset
+
+|        Method         |  Acc  |  Edit  | F1@0.1 | F1@0.25 | F1@0.5 |
+|:---------------------:|:-----:|:------:|:------:|:-------:|:------:|
+| MSTCN (CVPR'19)   |  64.5 |  42.5  |  45.2  |   41.6  |  33.0  |
+| ASFormer (BMVC'21)|  64.8 |  48.1  |  49.8  |   45.0  |  35.4  |
+| OODL (CVPR'22)   |  66.4 |  44.0  |  44.7  |   41.5  |  30.5  |
+| ProTAS (CVPR'24)  |  68.5 |  52.1  |  51.6  |   48.6  |  36.8  |
+| **BCFA (Ours)**   |  69.1 |  56.9  |  56.3  |   53.0  |  41.0  |
+
+---
+
+### Results on EgoPER Dataset
+
+|        Method       |   Acc   |   Edit   |  F1@0.1  | F1@0.25 |  F1@0.5  |
+|:-------------------:|:-------:|:--------:|:--------:|:-------:|:--------:|
+| MSTCN (CVPR'19)     |   71.8  |   48.9   |   56.2   |   52.2  |   39.4   |
+| ASFormer (BMVC'21)  |   70.3  |   60.6   |   66.1   |   62.3  |   44.7   |
+| OODL (CVPR'22)      |   71.2  |   49.3   |   55.6   |   52.3  |   40.0   |
+| ProTAS (CVPR'24)    |   71.7  |   62.4   |   68.8   |   65.9  |   48.6   |
+| **BCFA (Ours)**     | **76.2**| **72.3** | **73.3** | **70.4**| **58.4** |
+
+---
+
+### Results on GTEA Dataset
+
+|        Method       |   Acc   |   Edit   |  F1@0.1  | F1@0.25 |  F1@0.5  |
+|:-------------------:|:-------:|:--------:|:--------:|:-------:|:--------:|
+| MSTCN (CVPR'19)     |   74.0  |   64.4   |   71.8   |   69.4  |   56.0   |
+| ASFormer (BMVC'21)  |   77.2  |   73.3   |   79.6   |   77.1  |   65.0   |
+| OODL (CVPR'22)      |   74.0  |   64.7   |   70.3   |   66.9  |   54.1   |
+| ProTAS (CVPR'24)    |   77.0  |   74.1   |   80.2   |   77.5  |   66.1   |
+| **BCFA (Ours)**     | **77.3**| **78.6** | **82.6** | **79.4**| **67.6** |
+
+
 
 
