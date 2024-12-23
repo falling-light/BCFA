@@ -63,40 +63,177 @@ python main.py --action predict --dataset <dataset_name> --split <split_number> 
 
 ## Experimental Results on EgoProceL, EgoPER, and GTEA Datasets
 
-### Results on EgoProceL Dataset
+<h3 style="text-align:center;">Results on EgoProceL Dataset</h3>
 
-|        Method       |     Acc     |   Edit  |  F1@0.1 | F1@0.25 | F1@0.5  |
-|:-------------------:|:-----------:|:-------:|:-------:|:-------:|:-------:|
-| MSTCN (CVPR'19)     |     64.5    |   42.5  |   45.2  |   41.6  |   33.0  |
-| ASFormer (BMVC'21)  |     64.8    |   48.1  |   49.8  |   45.0  |   35.4  |
-| OODL (CVPR'22)      |     66.4    |   44.0  |   44.7  |   41.5  |   30.5  |
-| ProTAS (CVPR'24)    |     68.5    |   52.1  |   51.6  |   48.6  |   36.8  |
-| **BCFA (Ours)**     |   **69.1**  | **56.9**| **56.3**| **53.0**| **41.0**|
-
----
+<table style="width:100%; border-collapse:collapse; text-align:center; margin:auto; border:1px solid black;">
+    <thead>
+        <tr>
+            <th style="width:30%; text-align:center; border:1px solid black;">Method</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Acc</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Edit</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.1</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.25</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.5</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="border:1px solid black;">MSTCN (CVPR'19)</td>
+            <td style="border:1px solid black;">64.5</td>
+            <td style="border:1px solid black;">42.5</td>
+            <td style="border:1px solid black;">45.2</td>
+            <td style="border:1px solid black;">41.6</td>
+            <td style="border:1px solid black;">33.0</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ASFormer (BMVC'21)</td>
+            <td style="border:1px solid black;">64.8</td>
+            <td style="border:1px solid black;">48.1</td>
+            <td style="border:1px solid black;">49.8</td>
+            <td style="border:1px solid black;">45.0</td>
+            <td style="border:1px solid black;">35.4</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">OODL (CVPR'22)</td>
+            <td style="border:1px solid black;">66.4</td>
+            <td style="border:1px solid black;">44.0</td>
+            <td style="border:1px solid black;">44.7</td>
+            <td style="border:1px solid black;">41.5</td>
+            <td style="border:1px solid black;">30.5</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ProTAS (CVPR'24)</td>
+            <td style="border:1px solid black;">68.5</td>
+            <td style="border:1px solid black;">52.1</td>
+            <td style="border:1px solid black;">51.6</td>
+            <td style="border:1px solid black;">48.6</td>
+            <td style="border:1px solid black;">36.8</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;"><b>BCFA (Ours)</b></td>
+            <td style="border:1px solid black;"><b>69.1</b></td>
+            <td style="border:1px solid black;"><b>56.9</b></td>
+            <td style="border:1px solid black;"><b>56.3</b></td>
+            <td style="border:1px solid black;"><b>53.0</b></td>
+            <td style="border:1px solid black;"><b>41.0</b></td>
+        </tr>
+    </tbody>
+</table>
 
 ### Results on EgoPER Dataset
 
-|        Method       |   Acc   |   Edit   |  F1@0.1  | F1@0.25 |  F1@0.5  |
-|:-------------------:|:-------:|:--------:|:--------:|:-------:|:--------:|
-| MSTCN (CVPR'19)     |   71.8  |   48.9   |   56.2   |   52.2  |   39.4   |
-| ASFormer (BMVC'21)  |   70.3  |   60.6   |   66.1   |   62.3  |   44.7   |
-| OODL (CVPR'22)      |   71.2  |   49.3   |   55.6   |   52.3  |   40.0   |
-| ProTAS (CVPR'24)    |   71.7  |   62.4   |   68.8   |   65.9  |   48.6   |
-| **BCFA (Ours)**     | **76.2**| **72.3** | **73.3** | **70.4**| **58.4** |
+<h3 style="text-align:center;">Results on EgoPER Dataset</h3>
 
----
+<table style="width:100%; border-collapse:collapse; text-align:center; margin:auto; border:1px solid black;">
+    <thead>
+        <tr>
+            <th style="width:30%; text-align:center; border:1px solid black;">Method</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Acc</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Edit</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.1</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.25</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.5</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="border:1px solid black;">MSTCN (CVPR'19)</td>
+            <td style="border:1px solid black;">71.8</td>
+            <td style="border:1px solid black;">48.9</td>
+            <td style="border:1px solid black;">56.2</td>
+            <td style="border:1px solid black;">52.2</td>
+            <td style="border:1px solid black;">39.4</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ASFormer (BMVC'21)</td>
+            <td style="border:1px solid black;">70.3</td>
+            <td style="border:1px solid black;">60.6</td>
+            <td style="border:1px solid black;">66.1</td>
+            <td style="border:1px solid black;">62.3</td>
+            <td style="border:1px solid black;">44.7</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">OODL (CVPR'22)</td>
+            <td style="border:1px solid black;">71.2</td>
+            <td style="border:1px solid black;">49.3</td>
+            <td style="border:1px solid black;">55.6</td>
+            <td style="border:1px solid black;">52.3</td>
+            <td style="border:1px solid black;">40.0</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ProTAS (CVPR'24)</td>
+            <td style="border:1px solid black;">71.7</td>
+            <td style="border:1px solid black;">62.4</td>
+            <td style="border:1px solid black;">68.8</td>
+            <td style="border:1px solid black;">65.9</td>
+            <td style="border:1px solid black;">48.6</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;"><b>BCFA (Ours)</b></td>
+            <td style="border:1px solid black;"><b>76.2</b></td>
+            <td style="border:1px solid black;"><b>72.3</b></td>
+            <td style="border:1px solid black;"><b>73.3</b></td>
+            <td style="border:1px solid black;"><b>70.4</b></td>
+            <td style="border:1px solid black;"><b>58.4</b></td>
+        </tr>
+    </tbody>
+</table>
 
-### Results on GTEA Dataset
+<h3 style="text-align:center;">Results on GTEA Dataset</h3>
 
-|        Method       |   Acc   |   Edit   |  F1@0.1  | F1@0.25 |  F1@0.5  |
-|:-------------------:|:-------:|:--------:|:--------:|:-------:|:--------:|
-| MSTCN (CVPR'19)     |   74.0  |   64.4   |   71.8   |   69.4  |   56.0   |
-| ASFormer (BMVC'21)  |   77.2  |   73.3   |   79.6   |   77.1  |   65.0   |
-| OODL (CVPR'22)      |   74.0  |   64.7   |   70.3   |   66.9  |   54.1   |
-| ProTAS (CVPR'24)    |   77.0  |   74.1   |   80.2   |   77.5  |   66.1   |
-| **BCFA (Ours)**     | **77.3**| **78.6** | **82.6** | **79.4**| **67.6** |
-
-
+<table style="width:100%; border-collapse:collapse; text-align:center; margin:auto; border:1px solid black;">
+    <thead>
+        <tr>
+            <th style="width:30%; text-align:center; border:1px solid black;">Method</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Acc</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">Edit</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.1</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.25</th>
+            <th style="width:14%; text-align:center; border:1px solid black;">F1@0.5</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="border:1px solid black;">MSTCN (CVPR'19)</td>
+            <td style="border:1px solid black;">74.0</td>
+            <td style="border:1px solid black;">64.4</td>
+            <td style="border:1px solid black;">71.8</td>
+            <td style="border:1px solid black;">69.4</td>
+            <td style="border:1px solid black;">56.0</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ASFormer (BMVC'21)</td>
+            <td style="border:1px solid black;">77.2</td>
+            <td style="border:1px solid black;">73.3</td>
+            <td style="border:1px solid black;">79.6</td>
+            <td style="border:1px solid black;">77.1</td>
+            <td style="border:1px solid black;">65.0</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">OODL (CVPR'22)</td>
+            <td style="border:1px solid black;">74.0</td>
+            <td style="border:1px solid black;">64.7</td>
+            <td style="border:1px solid black;">70.3</td>
+            <td style="border:1px solid black;">66.9</td>
+            <td style="border:1px solid black;">54.1</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;">ProTAS (CVPR'24)</td>
+            <td style="border:1px solid black;">77.0</td>
+            <td style="border:1px solid black;">74.1</td>
+            <td style="border:1px solid black;">80.2</td>
+            <td style="border:1px solid black;">77.5</td>
+            <td style="border:1px solid black;">66.1</td>
+        </tr>
+        <tr>
+            <td style="border:1px solid black;"><b>BCFA (Ours)</b></td>
+            <td style="border:1px solid black;"><b>77.3</b></td>
+            <td style="border:1px solid black;"><b>78.6</b></td>
+            <td style="border:1px solid black;"><b>82.6</b></td>
+            <td style="border:1px solid black;"><b>79.4</b></td>
+            <td style="border:1px solid black;"><b>67.6</b></td>
+        </tr>
+    </tbody>
+</table>
 
 
