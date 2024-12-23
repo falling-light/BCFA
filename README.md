@@ -64,6 +64,6 @@ python main.py --action predict --dataset <dataset_name> --split <split_number> 
 ## Experimental Results on EgoProceL, EgoPER, and GTEA Datasets
 
 <div align="center">
-   <img src="readme_file/experiment.png" alt="case 1" width="800">
+   <img src="readme_file/experiment.png" alt="case 1" width="1000">
    <br><br>
 </div>
